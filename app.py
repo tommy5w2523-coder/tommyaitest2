@@ -7,8 +7,12 @@ import time
 st.set_page_config(page_title="AI 新聞工作台", page_icon="🤖", layout="wide")
 st.title("專屬 AI 新聞工作台 🎙️✍️")
 
-# 在側邊欄設定 API Key
-api_key = st.sidebar.text_input("請輸入你的 Gemini API Key", type="password")
+# 嘗試從 Streamlit 雲端保險箱讀取 API Key
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
+else:
+    # 如果保險箱沒有（例如你在本地端測試），才顯示側邊欄輸入框
+    api_key = st.sidebar.text_input("請輸入你的 Gemini API Key", type="password")
 
 if api_key:
     genai.configure(api_key=api_key)
@@ -167,4 +171,5 @@ with tab2:
                     genai.delete_file(audio_file.name)
                     
                 except Exception as e:
+
                     st.error(f"生成失敗，錯誤原因：{e}")
