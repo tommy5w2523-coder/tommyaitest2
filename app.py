@@ -102,7 +102,7 @@ with tab1:
 with tab2:
     st.header("多媒體逐字稿生成")
     
-    uploaded_file = st.file_uploader("請上傳音檔或影片檔 (支援 mp3, mp4, wav, m4a 等)", type=['mp3', 'mp4', 'wav', 'm4a'])
+    uploaded_file = st.file_uploader("請上傳音檔或影片檔 (支援 mp3, mp4, wav, m4a, mov 等)", type=['mp3', 'mp4', 'wav', 'm4a', 'mov'])
     
     task_option = st.radio("你想做什麼？", [
         "1. 產生中文逐字稿，並條列重點與 3 個重點標題",
@@ -173,3 +173,4 @@ with tab2:
                 except Exception as e:
 
                     st.error(f"生成失敗，錯誤原因：{e}")
+
