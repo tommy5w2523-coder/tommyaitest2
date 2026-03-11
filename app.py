@@ -2,6 +2,8 @@ import streamlit as st
 import google.generativeai as genai
 import time
 import os
+import requests
+from bs4 import BeautifulSoup
 
 st.set_page_config(page_title="新聞 AI 工作台", page_icon="📺")
 st.title("新聞 AI 工作台")
@@ -34,7 +36,7 @@ else:
     selected_model_name = None
 
 # ==================== 分頁設定 ====================
-tab1, tab2 = st.tabs(["📝 新聞稿改寫", "🎧 多媒體逐字稿"])
+tab1, tab2, tab3 = st.tabs(["📝 新聞稿改寫", "🎧 多媒體逐字稿", "🔗 網頁重點擷取"])
 
 # ==================== 分頁 1：改寫文章與網頁格式 ====================
 with tab1:
@@ -198,6 +200,90 @@ with tab2:
                 except Exception as e:
                     st.error(f"生成失敗，錯誤原因：{e}")
 
+# ==================== 分頁 3：網頁重點擷取 ====================
+with tab3:
+    st.header("🔗 網頁重點擷取")
+    st.markdown("可同時貼上多個國內外新聞網址，AI 將自動判斷語言、翻譯外文，並為你整理大綱與人物說法。")
+    
+    # 1. 介面升級：改成可以多行輸入的 text_area
+    target_urls_input = st.text_area("請貼上文章網址 (URL)，若有多個網址請「換行」貼上：", height=150, placeholder="https://網址1.com\nhttps://網址2.com")
+    
+    if st.button("⚡ 擷取並分析重點"):
+        # 將輸入的文字按換行符號切開，過濾掉空白的行數
+        urls = [url.strip() for url in target_urls_input.split('\n') if url.strip()]
+        
+        if not urls:
+            st.warning("請先輸入至少一個網址喔！")
+        else:
+            with st.spinner('偵察兵連線中，正在依序爬取網頁內容...'):
+                combined_article_text = ""
+                success_count = 0
+                
+                # 2. 爬蟲升級：使用迴圈依序去抓每個網址
+                for i, url in enumerate(urls):
+                    try:
+                        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+                        response = requests.get(url, headers=headers, timeout=10)
+                        response.raise_for_status() 
+                        
+                        soup = BeautifulSoup(response.text, 'html.parser')
+                        paragraphs = soup.find_all('p')
+                        article_text = "\n".join([p.text.strip() for p in paragraphs if len(p.text.strip()) > 10])
+                        
+                        if article_text:
+                            # 幫抓回來的內容貼上明確的標籤，讓 AI 不會搞混
+                            combined_article_text += f"==== 【網站 {i+1}】來源網址：{url} ====\n{article_text}\n\n"
+                            success_count += 1
+                        else:
+                            st.warning(f"⚠️ 網站 {i+1} ({url}) 抓不到內文，可能遭遇反爬蟲機制，已略過。")
+                    except Exception as e:
+                        st.error(f"❌ 網站 {i+1} ({url}) 連線或爬取失敗：{e}")
+                
+                if success_count == 0:
+                    st.error("所有網址都無法成功抓取內文，請確認網址是否正確。")
+                    st.stop()
+                    
+                st.toast(f"✅ 成功抓取 {success_count} 個網頁！交給 AI 處理中...")
+                
+                try:
+                    # 3. 呼叫 Gemini 進行客製化分析
+                    model = genai.GenerativeModel(selected_model_name)
+                    
+                    # 這是為你量身打造的全新動態提示詞
+                    prompt_text = f"""
+                    你現在是一位資深的電視新聞國際中心編譯與編輯。
+                    我會給你 {success_count} 篇從網路上擷取下來的文章內文，請針對每一個網站的內容「分別」進行處理。
+                    
+                    【處理規則】：請自動偵測各網站原文的語言，並依照以下兩種狀況嚴格執行。
+                    
+                    狀況 A：如果原文是「中文」
+                    1. 【文章大綱】：精煉整理出該篇文章的核心大綱。
+                    2. 【人物說法】：若內文有提及任何人物的發言、聲明或受訪內容，請條列式整理出來（請務必標明說話者是誰；若無人物發言則寫「無」）。
+                    
+                    狀況 B：如果原文是「外文」（包含英文、日文、韓文等任何非中文語言）
+                    1. 【全文明快翻譯】：請務必「先」將整篇文章翻譯成流暢、符合台灣新聞語感的中文。
+                    2. 【文章大綱】：根據翻譯後的內容，精煉整理出核心大綱。
+                    3. 【人物說法】：若內文有提及任何人物的發言、聲明或受訪內容，請條列式提取出來（請標明說話者是誰，並提供流暢的中文翻譯；若無則寫「無」）。
+
+                    【排版與區隔要求】：
+                    請務必明確區隔不同網站的內容。請使用「📺 【網站 1】分析」、「📺 【網站 2】分析」做為大標題。絕對不能將不同網站的資訊混淆在一起，讓編輯能一目了然。
+
+                    以下是爬取到的多篇文章內文：
+                    ---
+                    {combined_article_text}
+                    """
+                    
+                    response = model.generate_content(prompt_text)
+                    
+                    st.success("編譯與分析完成！")
+                    st.markdown("### 📊 多重網頁重點結果：")
+                    st.write(response.text)
+                    
+                    with st.expander("👀 點我查看 AI 爬抓到的「原始網頁純文字」"):
+                        st.text(combined_article_text)
+                        
+                except Exception as e:
+                    st.error(f"生成失敗，錯誤原因：{e}")
 
 
 
