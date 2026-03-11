@@ -123,7 +123,7 @@ with tab2:
                     
                     # 等待 Google 伺服器將檔案處理為 ACTIVE 狀態
                     while audio_file.state.name == "PROCESSING":
-                        time.sleep(10)
+                        time.sleep(2)
                         audio_file = genai.get_file(audio_file.name)
                         
                     if audio_file.state.name == "FAILED":
@@ -173,5 +173,6 @@ with tab2:
                 except Exception as e:
 
                     st.error(f"生成失敗，錯誤原因：{e}")
+
 
 
