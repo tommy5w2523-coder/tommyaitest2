@@ -24,15 +24,18 @@ if api_key:
             if 'generateContent' in m.supported_generation_methods:
                 available_models.append(m.name.replace('models/', ''))
         
-        selected_model_name = st.sidebar.selectbox(
-       "🧠 請選擇要使用的 AI 模型", 
-       [
-           "gemini-2.5-flash", 
-           "gemini-2.0-flash", 
-           "gemini-1.5-flash-latest", 
-           "gemini-1.5-pro-latest"
-       ]
-   )
+        # 自動連線 Google 伺服器，抓取你目前權限可用、且支援生成的模型名單
+available_models = [
+    m.name.replace("models/", "") 
+    for m in genai.list_models() 
+    if "generateContent" in m.supported_generation_methods
+]
+
+# 將抓回來的名單直接變成下拉選單
+selected_model_name = st.sidebar.selectbox(
+    "🧠 請選擇要使用的 AI 模型", 
+    available_models
+)
         st.sidebar.success(f"連線成功！目前使用：{selected_model_name}")
         
     except Exception as e:
@@ -207,6 +210,7 @@ with tab2:
                     
                 except Exception as e:
                     st.error(f"生成失敗，錯誤原因：{e}")
+
 
 
 
