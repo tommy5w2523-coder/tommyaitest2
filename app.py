@@ -1,53 +1,40 @@
 import streamlit as st
 import google.generativeai as genai
-import os
 import time
+import os
 
-# 網頁基本設定
-st.set_page_config(page_title="AI 新聞工作台", page_icon="🤖", layout="wide")
-st.title("專屬 AI 新聞工作台 🎙️✍️")
+st.set_page_config(page_title="新聞 AI 工作台", page_icon="📺")
+st.title("新聞 AI 工作台")
 
+# ==================== 1. API 讀取與模型設定 ====================
 # 嘗試從 Streamlit 雲端保險箱讀取 API Key
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 else:
-    # 如果保險箱沒有（例如你在本地端測試），才顯示側邊欄輸入框
+    # 如果保險箱沒有，才顯示側邊欄輸入框
     api_key = st.sidebar.text_input("請輸入你的 Gemini API Key", type="password")
 
+# 只有在確認有 API Key 的情況下，才去 Google 抓模型清單
 if api_key:
     genai.configure(api_key=api_key)
-    
-    # 抓取模型清單
     try:
-        available_models = []
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                available_models.append(m.name.replace('models/', ''))
-        
-        # 自動連線 Google 伺服器，抓取你目前權限可用、且支援生成的模型名單
-available_models = [
-    m.name.replace("models/", "") 
-    for m in genai.list_models() 
-    if "generateContent" in m.supported_generation_methods
-]
-
-# 將抓回來的名單直接變成下拉選單
-selected_model_name = st.sidebar.selectbox(
-    "🧠 請選擇要使用的 AI 模型", 
-    available_models
-)
-        st.sidebar.success(f"連線成功！目前使用：{selected_model_name}")
-        
+        # 自動連線抓取支援生成的模型名單
+        available_models = [
+            m.name.replace("models/", "") 
+            for m in genai.list_models() 
+            if "generateContent" in m.supported_generation_methods
+        ]
+        selected_model_name = st.sidebar.selectbox("🧠 請選擇要使用的 AI 模型", available_models)
+        st.sidebar.success("✅ API 連線成功！")
     except Exception as e:
-        st.error(f"讀取模型列表失敗，請確認 API Key 是否正確。錯誤訊息：{e}")
-        st.stop()
-        
+        st.sidebar.error("讀取模型清單失敗，請確認 API 額度或連線狀態。")
+        selected_model_name = "gemini-1.5-flash" # 預設備案
 else:
-    st.warning("👈 請先在左側輸入你的 API Key 才能開始使用喔！")
-    st.stop()
+    st.sidebar.warning("請先輸入 API Key 才能開始工作喔！")
+    selected_model_name = None
 
-# 建立兩個分頁區塊
-tab1, tab2 = st.tabs(["📝 新聞稿與 CG 自動排版", "🎧 音軌/影片逐字稿聽打"])
+# ==================== 分頁設定 ====================
+tab1, tab2 = st.tabs(["📝 新聞稿改寫", "🎧 多媒體逐字稿"])
 
 # ==================== 分頁 1：改寫文章與網頁格式 ====================
 with tab1:
@@ -210,6 +197,7 @@ with tab2:
                     
                 except Exception as e:
                     st.error(f"生成失敗，錯誤原因：{e}")
+
 
 
 
