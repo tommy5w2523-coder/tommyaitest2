@@ -24,7 +24,15 @@ if api_key:
             if 'generateContent' in m.supported_generation_methods:
                 available_models.append(m.name.replace('models/', ''))
         
-        selected_model_name = st.sidebar.selectbox("🧠 請選擇要使用的 AI 模型", available_models)
+        selected_model_name = st.sidebar.selectbox(
+    "🧠 請選擇要使用的 AI 模型", 
+    [
+        "gemini-2.5-flash", 
+        "gemini-2.0-flash", 
+        "gemini-1.5-flash", 
+        "gemini-1.5-pro"
+    ]
+)
         st.sidebar.success(f"連線成功！目前使用：{selected_model_name}")
         
     except Exception as e:
@@ -199,5 +207,6 @@ with tab2:
                     
                 except Exception as e:
                     st.error(f"生成失敗，錯誤原因：{e}")
+
 
 
