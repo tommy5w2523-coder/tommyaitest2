@@ -221,10 +221,16 @@ with tab3:
                 
                 # 2. 爬蟲升級：使用迴圈依序去抓每個網址
                 for i, url in enumerate(urls):
-                    try:
+                   try:
+                        # 關閉 Python 的安全警告，避免後台跑出一堆紅字
+                        import urllib3
+                        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                        
                         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-                        response = requests.get(url, headers=headers, timeout=10)
-                        response.raise_for_status() 
+                        
+                        # 在這裡加上 verify=False，命令偵察兵不檢查 SSL 憑證強行讀取
+                        response = requests.get(url, headers=headers, timeout=10, verify=False)
+                        response.raise_for_status()
                         
                         soup = BeautifulSoup(response.text, 'html.parser')
                         paragraphs = soup.find_all('p')
@@ -284,6 +290,7 @@ with tab3:
                         
                 except Exception as e:
                     st.error(f"生成失敗，錯誤原因：{e}")
+
 
 
 
