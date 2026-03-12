@@ -202,7 +202,7 @@ with tab2:
 
 # ==================== 分頁 3：網頁重點擷取 ====================
 with tab3:
-    st.header("🔗 網頁重點擷取")
+    st.header("🔗 多重網頁重點擷取與編譯")
     st.markdown("可同時貼上多個國內外新聞網址，AI 將自動判斷語言、翻譯外文，並為你整理大綱與人物說法。")
     
     # 1. 介面升級：改成可以多行輸入的 text_area
@@ -221,16 +221,16 @@ with tab3:
                 
                 # 2. 爬蟲升級：使用迴圈依序去抓每個網址
                 for i, url in enumerate(urls):
-                   try:
+                    try:
                         # 關閉 Python 的安全警告，避免後台跑出一堆紅字
                         import urllib3
                         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
                         
                         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
                         
-                        # 在這裡加上 verify=False，命令偵察兵不檢查 SSL 憑證強行讀取
+                        # 加入 verify=False，強行突破 SSL 憑證限制
                         response = requests.get(url, headers=headers, timeout=10, verify=False)
-                        response.raise_for_status()
+                        response.raise_for_status() 
                         
                         soup = BeautifulSoup(response.text, 'html.parser')
                         paragraphs = soup.find_all('p')
@@ -255,7 +255,6 @@ with tab3:
                     # 3. 呼叫 Gemini 進行客製化分析
                     model = genai.GenerativeModel(selected_model_name)
                     
-                    # 這是為你量身打造的全新動態提示詞
                     prompt_text = f"""
                     你現在是一位資深的電視新聞國際中心編譯與編輯。
                     我會給你 {success_count} 篇從網路上擷取下來的文章內文，請針對每一個網站的內容「分別」進行處理。
@@ -290,6 +289,7 @@ with tab3:
                         
                 except Exception as e:
                     st.error(f"生成失敗，錯誤原因：{e}")
+
 
 
 
