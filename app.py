@@ -197,21 +197,20 @@ with tab2:
                         2. 若其中有提供專有名詞或背景知識，請據此精準理解語境並校正相關字眼。
                         """
                     
-# 微調物理限制器：放寬頻率懲罰，加入存在懲罰 (鼓勵往下聽新內容)
+# 針對 Flash 模型：拿掉不支援的 penalty，只保留極低的 temperature (0.2) 減少幻覺腦補
                     safe_config = genai.GenerationConfig(
-                        temperature=0.2, 
-                        frequency_penalty=0.5, 
-                        presence_penalty=0.5
+                        temperature=0.2
                     )
                     
                     response = model.generate_content([audio_file, prompt_text], generation_config=safe_config)
                     
-                    # 加上「防交白卷」安全氣囊
+                    # 加上「防交白卷」安全氣囊 (保留這個很棒的防護網)
                     if not response.candidates or not response.candidates[0].content.parts:
                         st.error("⚠️ AI 這次交了白卷！可能是該段音檔雜音過多、全為空白，或是 AI 觸發了防護機制。請確認音檔內容或稍微剪輯後再試一次。")
                     else:
                         st.markdown("### 📝 聽打結果：")
                         st.code(response.text, language="markdown")
+                    
                  
                     
                     st.markdown("### 📝 聽打結果：")
