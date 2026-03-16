@@ -36,7 +36,7 @@ else:
     selected_model_name = None
 
 # ==================== 分頁設定 ====================
-tab1, tab2, tab3 = st.tabs(["📝 新聞稿改寫", "🎧 多媒體逐字稿", "🔗 網頁重點擷取"])
+tab1, tab2, tab3, tab4 = st.tabs(["📝 新聞稿改寫", "🎧 多媒體逐字稿", "🔗 網頁重點擷取", "💡 稿頭與標題生成"])
 
 # ==================== 分頁 1：改寫文章與網頁格式 ====================
 with tab1:
@@ -275,6 +275,53 @@ with tab3:
                     
                     with st.expander("👀 點我查看 AI 爬抓到的「原始網頁純文字」"):
                         st.text(combined_article_text)
+                        
+                except Exception as e:
+                    st.error(f"生成失敗，錯誤原因：{e}")
+
+# ==================== 分頁 4：主播稿頭與電視標題生成 ====================
+with tab4:
+    st.header("💡 主播稿頭與電視標題生成")
+    st.markdown("貼上寫好的內文，AI 瞬間幫你濃縮出 100 字內的主播稿頭，並產出符合台灣新聞台鏡面邏輯的 3 個精準大標。")
+    
+    raw_news_text = st.text_area("請貼上你寫好的新聞內文：", height=200, placeholder="將採訪整理好的內文貼在這裡...")
+    
+    if st.button("📺 產出稿頭與標題"):
+        if not raw_news_text:
+            st.warning("請先貼上新聞內文喔！")
+        else:
+            with st.spinner('編輯台長官審稿中...正在生標題與稿頭...'):
+                try:
+                    model = genai.GenerativeModel(selected_model_name)
+                    
+                    prompt_text = f"""
+                    你現在是一位資深的台灣電視新聞台「核稿編輯」與「製作人」。
+                    我會給你一段記者剛寫好的新聞內文，請嚴格執行以下兩項任務：
+
+                    1. 【撰寫主播稿頭（Lead）】：
+                       - 任務：濃縮這則新聞的最核心、最具爆點的精華，寫成一段讓主播在畫面上唸出來的引言。
+                       - 字數絕對限制：長度「絕對不可以超過 100 個字」。
+                       - 符號嚴格要求：稿頭內的所有標點符號，請「一律使用半形符號」（如半形逗號,、句號.），絕對不要出現任何全形符號。
+                       - 風格要求：口語化、具備新聞張力，必須能立刻抓住觀眾眼球。
+
+                    2. 【下 3 個電視新聞大標題（CG Headline）】：
+                       - 任務：參考台灣電視新聞的鏡面標題邏輯，精準抓出衝突點、爆點或受訪者金句。
+                       - 字數絕對限制：每個標題的字數必須嚴格介於「17 到 22 個字」之間。
+                       - 標點符號嚴格要求：標題內「絕對不可以」出現句號與逗號（無論全形或半形）。斷句請直接使用「半形空白」。若依據文意需要增添語氣，可以適度使用「半形」的驚嘆號「!」或問號「?」。
+
+                    以下是記者的原始文稿：
+                    ---
+                    {raw_news_text}
+                    """
+                    
+                    # 使用 Flash 相容的低溫防護設定，避免 AI 產生無關的幻覺
+                    safe_config = genai.GenerationConfig(temperature=0.2)
+                    response = model.generate_content(prompt_text, generation_config=safe_config)
+                    
+                    st.success("產出完成！")
+                    st.markdown("### 📝 稿頭與標題結果：")
+                    # 一樣幫你加上超方便的「一鍵複製」功能
+                    st.code(response.text, language="markdown")
                         
                 except Exception as e:
                     st.error(f"生成失敗，錯誤原因：{e}")
