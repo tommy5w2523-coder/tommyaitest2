@@ -282,7 +282,7 @@ with tab3:
 # ==================== 分頁 4：主播稿頭與電視標題生成 ====================
 with tab4:
     st.header("💡 主播稿頭與電視標題生成")
-    st.markdown("貼上寫好的內文，AI 瞬間幫你濃縮出 100 字內的主播稿頭，並產出3個標題。")
+    st.markdown("貼上寫好的內文，AI 瞬間幫你濃縮出 100 字內的主播稿頭，並產出3個大標。")
     
     raw_news_text = st.text_area("請貼上你寫好的新聞內文：", height=200, placeholder="將採訪整理好的內文貼在這裡...")
     
@@ -290,7 +290,7 @@ with tab4:
         if not raw_news_text:
             st.warning("請先貼上新聞內文喔！")
         else:
-            with st.spinner('長官審稿中...正在生標題與稿頭...'):
+            with st.spinner('編輯台長官審稿中...正在生標題與稿頭...'):
                 try:
                     model = genai.GenerativeModel(selected_model_name)
                     
@@ -307,20 +307,19 @@ with tab4:
                     2. 【下 3 個電視新聞大標題（CG Headline）】：
                        - 任務：參考台灣電視新聞的鏡面標題邏輯，精準抓出衝突點、爆點或受訪者金句。
                        - 字數絕對限制：每個標題的字數必須嚴格介於「17 到 20 個字」之間。
-                       - 標點符號嚴格要求：標題內「絕對不可以」出現句號與逗號（無論全形或半形）。斷句請直接使用「半形空白」。若依據文意需要增添語氣，可以適度使用「半形」的驚嘆號「!」或問號「?」。
+                       - 斷句與標點嚴格要求：標題內「絕對不可以」出現句號與逗號。斷句請直接使用「半形空白」，且【每個標題最多只能出現一次空白】（亦即將標題精準分為前半段與後半段）。可適度使用半形的「!」或「?」增添語氣。
+                       - 受訪者金句排版鐵律：3 個標題中，【至少要有 1 個標題】必須引用核心受訪者的回答。且依照台灣新聞台邏輯，標題若有受訪者發言，【金句必須放在標題的後半段】（亦即半形空白的後面）。
 
                     以下是記者的原始文稿：
                     ---
                     {raw_news_text}
                     """
                     
-                    # 使用 Flash 相容的低溫防護設定，避免 AI 產生無關的幻覺
                     safe_config = genai.GenerationConfig(temperature=0.2)
                     response = model.generate_content(prompt_text, generation_config=safe_config)
                     
                     st.success("產出完成！")
                     st.markdown("### 📝 稿頭與標題結果：")
-                    # 一樣幫你加上超方便的「一鍵複製」功能
                     st.code(response.text, language="markdown")
                         
                 except Exception as e:
