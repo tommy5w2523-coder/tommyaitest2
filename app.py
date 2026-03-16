@@ -113,6 +113,7 @@ with tab2:
     
     # 更人性化、提示更明確的開關
     fast_mode = st.checkbox("⚡ 啟動極速聽打模式（⚠️ 注意：無重點整理 + 無新聞標題，只直出純逐字稿，適合搶快！）")
+    custom_keywords = st.text_input("💡 專有名詞小抄 (選填)：有特殊人名、地名或專案名嗎？請輸入並用逗號隔開 ，可大幅提升精準度！")
     
     if st.button("🎧 開始聽打分析"):
         if uploaded_file:
@@ -190,7 +191,7 @@ with tab2:
                     response = model.generate_content([audio_file, prompt_text])
                     
                     st.markdown("### 📝 聽打結果：")
-                    st.write(response.text)
+                    st.code(response.text, language="markdown")
                     
                     # 清理本地暫存檔
                     os.remove(temp_file_path)
@@ -282,7 +283,7 @@ with tab3:
                     
                     st.success("編譯與分析完成！")
                     st.markdown("### 📊 多重網頁重點結果：")
-                    st.write(response.text)
+                    st.code(response.text, language="markdown")
                     
                     with st.expander("👀 點我查看 AI 爬抓到的「原始網頁純文字」"):
                         st.text(combined_article_text)
