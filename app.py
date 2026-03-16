@@ -197,7 +197,12 @@ with tab2:
                         2. 若其中有提供專有名詞或背景知識，請據此精準理解語境並校正相關字眼。
                         """
                     
-                    response = model.generate_content([audio_file, prompt_text])
+                    # 加入底層參數：降低創意度 (temperature) 與強制頻率懲罰 (frequency_penalty) 來斬斷跳針
+                    safe_config = genai.GenerationConfig(
+                        temperature=0.2, 
+                        frequency_penalty=2.0
+                    )
+                    response = model.generate_content([audio_file, prompt_text], generation_config=safe_config)
                     
                     st.markdown("### 📝 聽打結果：")
                     st.code(response.text, language="markdown")
