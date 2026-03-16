@@ -71,4 +71,210 @@ with tab1:
 
     標題：影音／[你生成的全形斷句大標題]
 
-    [第一個 HTML 小
+    [第一個 HTML 小標題]
+    [轉換後的第一段內文]
+
+    [第二個 HTML 小標題]
+    [轉換後的第二段內文]
+
+    [圖說1，含前後 HTML 標籤]
+    [圖說2，含前後 HTML 標籤]
+    [圖說3，含前後 HTML 標籤]
+    [圖說4，含前後 HTML 標籤]
+    [圖說5，含前後 HTML 標籤]
+    [圖說6，含前後 HTML 標籤]
+    """    
+    user_text = st.text_area("請貼上原始採訪稿或雜亂的筆記：", height=200)
+    
+    if st.button("🚀 開始改寫與排版"):
+        if user_text:
+            with st.spinner('AI 正在幫你改寫與排版中...'):
+                try:
+                    model = genai.GenerativeModel(selected_model_name)
+                    response = model.generate_content(system_prompt + "\n\n以下是原始稿件：\n" + user_text)
+                    
+                    st.markdown("### ✨ 處理結果 (可直接複製貼上後台)：")
+                    st.code(response.text, language="markdown")
+                except Exception as e:
+                    st.error(f"生成失敗，錯誤原因：{e}")
+
+# ==================== 分頁 2：逐字稿與翻譯 ====================
+with tab2:
+    st.header("多媒體逐字稿生成")
+    
+    uploaded_file = st.file_uploader("請上傳音檔或影片檔 (支援 mp3, mp4, wav, m4a, mov 等)", type=['mp3', 'mp4', 'wav', 'm4a', 'mov'])
+    st.info("💡 **手機版上傳戰術提示**：如果是 iPhone「語音備忘錄」的錄音，請先在備忘錄點擊「分享」➔「儲存到檔案」，接著再從下方點擊上傳喔！")
+    
+    task_option = st.radio("你想做什麼？", [
+        "1. 產生中文逐字稿，並條列重點與 3 個重點標題",
+        "2. 產生原文逐字稿與中文翻譯比對，並生成 3 個重點標題"
+    ])
+    
+    fast_mode = st.checkbox("⚡ 啟動極速聽打模式（⚠️ 注意：無重點整理 + 無新聞標題，只直出純逐字稿，適合搶快！）")
+    custom_keywords = st.text_input("💡 專有名詞小抄 (選填)：輸入人名、地名或專案名並用逗號隔開 (如：黃國昌, 輝達)，可大幅提升精準度！")
+    
+    if st.button("🎧 開始聽打分析"):
+        if uploaded_file:
+            with st.spinner('上傳與處理中，這可能需要幾分鐘...'):
+                try:
+                    temp_file_path = uploaded_file.name
+                    with open(temp_file_path, "wb") as f:
+                        f.write(uploaded_file.getbuffer())
+                    
+                    st.toast("檔案上傳中，請稍候...")
+                    audio_file = genai.upload_file(path=temp_file_path)
+                    
+                    while audio_file.state.name == "PROCESSING":
+                        time.sleep(2)
+                        audio_file = genai.get_file(audio_file.name)
+                        
+                    if audio_file.state.name == "FAILED":
+                        st.error("Google 伺服器解析檔案失敗，請確認檔案格式是否損毀。")
+                        st.stop()
+                    
+                    st.toast("檔案解析完成！AI 開始聽打中...")
+                    model = genai.GenerativeModel(selected_model_name)
+                    
+                    if fast_mode:
+                        if "1." in task_option:
+                            prompt_text = """
+                            請詳細聆聽這段音檔，並嚴格執行以下任務。
+                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請略過。
+
+                            1. 【中文逐字稿】：產出高準確度且語句通順的中文逐字稿。
+                               - 語者辨識：請務必分辨不同的說話者。
+                               - 排版分段：只要「換人說話」，或是「同一人發言內容過長」，請務必「換行分段」呈現。
+                            """
+                        else:
+                            prompt_text = """
+                            請詳細聆聽這段音檔，並嚴格執行以下任務。
+                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請略過。
+
+                            1. 【雙語比對逐字稿】：自動辨識音檔中的原始語言，產出精確的「原文逐字稿」。
+                               - 排版分段：換人說話必須換行。在每一個原文段落的正下方，直接提供對應的「中文翻譯」。區塊之間請空一行。
+                            """
+                    else:
+                        if "1." in task_option:
+                            prompt_text = """
+                            請詳細聆聽這段音檔，並嚴格執行以下三項任務。
+                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請略過。
+
+                            1. 【中文逐字稿】：產出高準確度且語句通順的中文逐字稿。
+                               - 語者辨識：請務必分辨不同的說話者。
+                               - 排版分段：換人說話或發言過長，請務必換行分段。
+                            2. 【重點條列】：根據逐字稿內容，精煉並條列出核心重點。
+                            3. 【電視新聞標題】：生成 3 個具備「電視新聞感」的標題（15-17字內，全形空白斷句，不加句號）。
+                            """
+                        else:
+                            prompt_text = """
+                            請詳細聆聽這段音檔，並嚴格執行以下三項任務。
+                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請略過。
+
+                            1. 【雙語比對逐字稿】：產出精確的「原文逐字稿」。
+                               - 排版分段：換人說話必須換行。在原文段落正下方，直接提供對應的「中文翻譯」。
+                            2. 【中文重點條列】：總結音檔內容，條列出中文核心重點。
+                            3. 【電視新聞標題】：生成 3 個具備「電視新聞感」的中文標題（15-17字內，全形空白斷句，不加句號）。
+                            """
+                    
+                    prompt_text += """
+                    【語境校正強制指令】：你具備台灣時事、政治、財經與國際常識。請務必根據上下文邏輯，自動校正同音錯字（例如聽到果倉，請自動校正為黃國昌）。絕對不允許出現不合邏輯的同音異字。
+                    """
+                    
+                    if custom_keywords:
+                        prompt_text += f"\n【今日重點專有名詞】：請優先辨識並確保以下字詞正確無誤：{custom_keywords}\n"
+                    
+                    # 使用 Flash 相容的低溫防護設定
+                    safe_config = genai.GenerationConfig(temperature=0.2)
+                    response = model.generate_content([audio_file, prompt_text], generation_config=safe_config)
+                    
+                    # 防白卷安全網
+                    if not response.candidates or not response.candidates[0].content.parts:
+                        st.error("⚠️ AI 這次交了白卷！可能是該段音檔雜音過多、全為空白，或是 AI 觸發了防護機制。請確認音檔內容或稍微剪輯後再試一次。")
+                    else:
+                        st.markdown("### 📝 聽打結果：")
+                        st.code(response.text, language="markdown")
+                    
+                    os.remove(temp_file_path)
+                    genai.delete_file(audio_file.name)
+                    
+                except Exception as e:
+                    st.error(f"生成失敗，錯誤原因：{e}")
+
+# ==================== 分頁 3：網頁重點擷取 ====================
+with tab3:
+    st.header("🔗 多重網頁重點擷取與編譯")
+    st.markdown("可同時貼上多個國內外新聞網址，AI 將自動判斷語言、翻譯外文，並為你整理大綱與人物說法。")
+    
+    target_urls_input = st.text_area("請貼上文章網址 (URL)，若有多個網址請「換行」貼上：", height=150, placeholder="https://網址1.com\nhttps://網址2.com")
+    
+    if st.button("⚡ 擷取並分析重點"):
+        urls = [url.strip() for url in target_urls_input.split('\n') if url.strip()]
+        
+        if not urls:
+            st.warning("請先輸入至少一個網址喔！")
+        else:
+            with st.spinner('偵察兵連線中，正在依序爬取網頁內容...'):
+                combined_article_text = ""
+                success_count = 0
+                
+                for i, url in enumerate(urls):
+                    try:
+                        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+                        response = requests.get(url, headers=headers, timeout=10, verify=False)
+                        response.raise_for_status() 
+                        
+                        soup = BeautifulSoup(response.text, 'html.parser')
+                        paragraphs = soup.find_all('p')
+                        article_text = "\n".join([p.text.strip() for p in paragraphs if len(p.text.strip()) > 10])
+                        
+                        if article_text:
+                            combined_article_text += f"==== 【網站 {i+1}】來源網址：{url} ====\n{article_text}\n\n"
+                            success_count += 1
+                        else:
+                            st.warning(f"⚠️ 網站 {i+1} ({url}) 抓不到內文，可能遭遇反爬蟲機制，已略過。")
+                    except Exception as e:
+                        st.error(f"❌ 網站 {i+1} ({url}) 連線或爬取失敗：{e}")
+                
+                if success_count == 0:
+                    st.error("所有網址都無法成功抓取內文，請確認網址是否正確。")
+                    st.stop()
+                    
+                st.toast(f"✅ 成功抓取 {success_count} 個網頁！交給 AI 處理中...")
+                
+                try:
+                    model = genai.GenerativeModel(selected_model_name)
+                    
+                    prompt_text = f"""
+                    你現在是一位資深的電視新聞國際中心編譯與編輯。
+                    我會給你 {success_count} 篇從網路上擷取下來的文章內文，請針對每一個網站的內容「分別」進行處理。
+                    
+                    【處理規則】：請自動偵測各網站原文的語言，並依照以下兩種狀況嚴格執行。
+                    
+                    狀況 A：如果原文是「中文」
+                    1. 【文章大綱】：精煉整理出該篇文章的核心大綱。
+                    2. 【人物說法】：若內文有提及任何人物的發言、聲明或受訪內容，請條列式整理出來（請務必標明說話者是誰；若無人物發言則寫「無」）。
+                    
+                    狀況 B：如果原文是「外文」（包含英文、日文、韓文等任何非中文語言）
+                    1. 【全文明快翻譯】：請務必「先」將整篇文章翻譯成流暢、符合台灣新聞語感的中文。
+                    2. 【文章大綱】：根據翻譯後的內容，精煉整理出核心大綱。
+                    3. 【人物說法】：若內文有提及任何人物的發言、聲明或受訪內容，請條列式提取出來（請標明說話者是誰，並提供流暢的中文翻譯；若無則寫「無」）。
+
+                    【排版與區隔要求】：
+                    請務必明確區隔不同網站的內容。請使用「📺 【網站 1】分析」、「📺 【網站 2】分析」做為大標題。絕對不能將不同網站的資訊混淆在一起，讓編輯能一目了然。
+
+                    以下是爬取到的多篇文章內文：
+                    ---
+                    {combined_article_text}
+                    """
+                    
+                    response = model.generate_content(prompt_text)
+                    
+                    st.success("編譯與分析完成！")
+                    st.markdown("### 📊 多重網頁重點結果：")
+                    st.code(response.text, language="markdown")
+                    
+                    with st.expander("👀 點我查看 AI 爬抓到的「原始網頁純文字」"):
+                        st.text(combined_article_text)
+                        
+                except Exception as e:
+                    st.error(f"生成失敗，錯誤原因：{e}")
