@@ -113,7 +113,7 @@ with tab2:
     custom_instructions = st.text_area(
         "💡 採訪背景與特殊指令 (選填)：", 
         height=100, 
-        placeholder="請直接用白話文告訴 AI 狀況。例如：\n1. 這是關於美股與核能產業的專訪。\n2. 音檔中的女聲是記者，男聲是分析師黃國昌。\n3. 遇到Constellation Energy請翻成星座能源。"
+        placeholder="請直接用白話文告訴 AI 狀況。例如：\n1. 這是關於美股與核能產業的專訪。\n2. 音檔中的女聲是A，男聲是B。\n3. 遇到Constellation Energy請翻成星座能源。"
     )
     
     if st.button("🎧 開始聽打分析"):
