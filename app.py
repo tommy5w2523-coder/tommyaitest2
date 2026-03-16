@@ -4,6 +4,10 @@ import time
 import os
 import requests
 from bs4 import BeautifulSoup
+import urllib3
+
+# 關閉 urllib3 的安全警告
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 st.set_page_config(page_title="新聞 AI 工作台", page_icon="📺")
 st.title("新聞 AI 工作台")
@@ -50,15 +54,15 @@ with tab1:
        - 標題的斷句處請使用「全形空白」取代逗號（，）。
        - 標題結尾絕對不要加上句號（。）。
        - 標題內的引號（「」）或頓號（、）可保留，但包含數字在內的所有保留符號與空格，必須嚴格使用「全形」。
-    3. 清除電視術語：自動刪除所有的畫面與過音提示（如 NS、OS、CG、Stand、Super 等）。同時，刪除文稿最末尾的記者署名與台呼（例如：TVBS新聞 OOO XXX 地點報導）。
+    3. 清除電視術語：自動刪除所有的畫面與過音提示（如 NS、OS、CG、Stand、Super 等）。同時，刪除文稿最末尾的記者署名與台呼。
     4. 處理受訪者口白：遇到「SB」或「BS」提示時，刪除該英文代號，並將受訪者職稱姓名與其口白內容，轉換為完整的對話格式：職稱姓名：「口白內容」。
-    5. 通順文章結構（禁止超譯）：打破原本零碎的過音段落，用流暢的敘事邏輯把故事說完整。將口語化的文句潤飾為新聞報導文體，但「絕對不可超譯」或添加文稿中未提供的外部資訊。
+    5. 通順文章結構（禁止超譯）：打破原本零碎的過音段落，用流暢的敘事邏輯把故事說完整。
     6. 插入 HTML 小標題：為內文進行邏輯分段，並在每個段落前加入字數介於 15 到 20 字 的小標題。小標題必須套用以下完整的 HTML 語法：
        <h2><span style="color:#0000FF;">小標題文字</span></h2>
     7. 預擬 6 個專屬圖說：根據內文情境，在文章最下方產出 6 句供挑選的圖說。每一句圖說的前後與版權標示，必須嚴格套用以下語法：
        <br /> 圖說內容文字。（圖／TVBS） <br />
-       【圖說特別規範】：直接輸出句子即可，**絕對禁止**在句子前面加上「圖說：」、「圖說1：」等任何提示或註記字眼。
-    8. 強制純文字與程式碼區塊輸出：為了防止發稿系統的介面隱藏或吃掉 HTML 語法，轉換後的「所有成品內容」（包含內文、小標題、圖說），必須全部包裝在一個 `text` 的程式碼區塊中輸出（即 ```text ... ```），確保原始碼一字不漏地呈現。
+       【圖說特別規範】：直接輸出句子即可，絕對禁止在句子前面加上提示或註記字眼。
+    8. 強制純文字與程式碼區塊輸出：所有成品內容必須全部包裝在一個 `text` 的程式碼區塊中輸出（即 ```text ... ```），確保原始碼一字不漏地呈現。
 
     # 最終輸出排版格式 (Output Template)
     請你「嚴格」依照以下的排版結構輸出，包含結構中的「空行」都必須精準重現：
@@ -67,144 +71,4 @@ with tab1:
 
     標題：影音／[你生成的全形斷句大標題]
 
-    [第一個 HTML 小標題]
-    [轉換後的第一段內文]
-
-    [第二個 HTML 小標題]
-    [轉換後的第二段內文]
-
-    [圖說1，含前後 HTML 標籤]
-    [圖說2，含前後 HTML 標籤]
-    [圖說3，含前後 HTML 標籤]
-    [圖說4，含前後 HTML 標籤]
-    [圖說5，含前後 HTML 標籤]
-    [圖說6，含前後 HTML 標籤]
-    """    
-    user_text = st.text_area("請貼上原始採訪稿或雜亂的筆記：", height=200)
-    
-    if st.button("🚀 開始改寫與排版"):
-        if user_text:
-            with st.spinner('AI 正在幫你改寫與排版中...'):
-                try:
-                    model = genai.GenerativeModel(selected_model_name)
-                    response = model.generate_content(system_prompt + "\n\n以下是原始稿件：\n" + user_text)
-                    
-                    st.markdown("### ✨ 處理結果 (可直接複製貼上後台)：")
-                    st.code(response.text, language="markdown")
-                except Exception as e:
-                    st.error(f"生成失敗，錯誤原因：{e}")
-
-# ==================== 分頁 2：逐字稿與翻譯 ====================
-with tab2:
-    st.header("多媒體逐字稿生成")
-    
-    uploaded_file = st.file_uploader("請上傳音檔或影片檔 (支援 mp3, mp4, wav, m4a, mov 等)", type=['mp3', 'mp4', 'wav', 'm4a', 'mov'])
-    
-    st.info("💡 **手機版上傳戰術提示**：如果是 iPhone「語音備忘錄」的錄音，請先在備忘錄點擊「分享」➔「儲存到檔案」，接著再從下方點擊上傳喔！")
-    
-    task_option = st.radio("你想做什麼？", [
-        "1. 產生中文逐字稿，並條列重點與 3 個重點標題",
-        "2. 產生原文逐字稿與中文翻譯比對，並生成 3 個重點標題"
-    ])
-    
-fast_mode = st.checkbox("⚡ 啟動極速聽打模式（⚠️ 注意：無重點整理 + 無新聞標題，只直出純逐字稿，適合搶快！）")
-    
-    # 1. 介面退回輕量級的單行輸入框
-    custom_keywords = st.text_input("💡 專有名詞小抄 (選填)：輸入人名、地名或專案名並用逗號隔開 (如：黃國昌, 輝達)，可大幅提升精準度！")
-    
-    if st.button("🎧 開始聽打分析"):
-        if uploaded_file:
-            with st.spinner('上傳與處理中，這可能需要幾分鐘...'):
-                try:
-                    temp_file_path = uploaded_file.name
-                    with open(temp_file_path, "wb") as f:
-                        f.write(uploaded_file.getbuffer())
-                    
-                    st.toast("檔案上傳中，請稍候...")
-                    audio_file = genai.upload_file(path=temp_file_path)
-                    
-                    while audio_file.state.name == "PROCESSING":
-                        time.sleep(2)
-                        audio_file = genai.get_file(audio_file.name)
-                        
-                    if audio_file.state.name == "FAILED":
-                        st.error("Google 伺服器解析檔案失敗，請確認檔案格式是否損毀。")
-                        st.stop()
-                    
-                    st.toast("檔案解析完成！AI 開始聽打中...")
-                    model = genai.GenerativeModel(selected_model_name)
-                    
-                    if fast_mode:
-                        if "1." in task_option:
-                            prompt_text = """
-                            請詳細聆聽這段音檔，並嚴格執行以下任務。
-                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請略過。
-
-                            1. 【中文逐字稿】：產出高準確度且語句通順的中文逐字稿。
-                               - 語者辨識：請務必分辨不同的說話者。
-                               - 排版分段：只要「換人說話」，或是「同一人發言內容過長」，請務必「換行分段」呈現。
-                            """
-                        else:
-                            prompt_text = """
-                            請詳細聆聽這段音檔，並嚴格執行以下任務。
-                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請略過。
-
-                            1. 【雙語比寫逐字稿】：自動辨識音檔中的原始語言，產出精確的「原文逐字稿」。
-                               - 排版分段：換人說話必須換行。在每一個原文段落的正下方，直接提供對應的「中文翻譯」。區塊之間請空一行。
-                            """
-                    else:
-                        if "1." in task_option:
-                            prompt_text = """
-                            請詳細聆聽這段音檔，並嚴格執行以下三項任務。
-                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請略過。
-
-                            1. 【中文逐字稿】：產出高準確度且語句通順的中文逐字稿。
-                               - 語者辨識：請務必分辨不同的說話者。
-                               - 排版分段：換人說話或發言過長，請務必換行分段。
-                            2. 【重點條列】：根據逐字稿內容，精煉並條列出核心重點。
-                            3. 【電視新聞標題】：生成 3 個具備「電視新聞感」的標題（15-17字內，全形空白斷句，不加句號）。
-                            """
-                        else:
-                            prompt_text = """
-                            請詳細聆聽這段音檔，並嚴格執行以下三項任務。
-                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請略過。
-
-                            1. 【雙語比對逐字稿】：產出精確的「原文逐字稿」。
-                               - 排版分段：換人說話必須換行。在原文段落正下方，直接提供對應的「中文翻譯」。
-                            2. 【中文重點條列】：總結音檔內容，條列出中文核心重點。
-                            3. 【電視新聞標題】：生成 3 個具備「電視新聞感」的中文標題（15-17字內，全形空白斷句，不加句號）。
-                            """
-                    
-                    # 2. 保留最強大的台灣政經大腦與小抄系統
-                    prompt_text += """
-                    【語境校正強制指令】：你具備台灣時事、政治、財經與國際常識。請務必根據上下文邏輯，自動校正同音錯字（例如聽到果倉，請自動校正為黃國昌）。絕對不允許出現不合邏輯的同音異字。
-                    """
-                    
-                    if custom_keywords:
-                        prompt_text += f"\n【今日重點專有名詞】：請優先辨識並確保以下字詞正確無誤：{custom_keywords}\n"
-                    
-                    # 3. 確保只留下防腦補的低溫設定，維持高速度
-                    safe_config = genai.GenerationConfig(temperature=0.2)
-                    response = model.generate_content([audio_file, prompt_text], generation_config=safe_config)
-                    
-                    if not response.candidates or not response.candidates[0].content.parts:
-                        st.error("⚠️ AI 這次交了白卷！可能是該段音檔雜音過多、全為空白，或是 AI 觸發了防護機制。請確認音檔內容或稍微剪輯後再試一次。")
-                    else:
-                        st.markdown("### 📝 聽打結果：")
-                        st.code(response.text, language="markdown")
-                    
-                    os.remove(temp_file_path)
-                    genai.delete_file(audio_file.name)
-                    
-                except Exception as e:
-                    st.error(f"生成失敗，錯誤原因：{e}")
-
-# ==================== 分頁 3：網頁重點擷取 ====================
-with tab3:
-    st.header("🔗 多重網頁重點擷取與編譯")
-    st.markdown("可同時貼上多個國內外新聞網址，AI 將自動判斷語言、翻譯外文，並為你整理大綱與人物說法。")
-    
-    target_urls_input = st.text_area("請貼上文章網址 (URL)，若有多個網址請「換行」貼上：", height=150, placeholder="https://網址1.com\nhttps://網址2.com")
-    
-    if st.button("⚡ 擷取並分析重點"):
-        urls = [url.strip() for url in target_urls_input.split('\n') if url.strip()]
+    [第一個 HTML 小
