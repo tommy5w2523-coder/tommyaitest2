@@ -94,7 +94,8 @@ with tab1:
                     response = model.generate_content(system_prompt + "\n\n以下是原始稿件：\n" + user_text)
                     
                     st.markdown("### ✨ 處理結果 (可直接複製貼上後台)：")
-                    st.markdown(response.text)
+                    # 【優化】這裡也幫你換成了帶有「一鍵複製」按鈕的格式！
+                    st.code(response.text, language="markdown")
                 except Exception as e:
                     st.error(f"生成失敗，錯誤原因：{e}")
 
@@ -111,7 +112,6 @@ with tab2:
         "2. 產生原文逐字稿與中文翻譯比對，並生成 3 個重點標題"
     ])
     
-    # 更人性化、提示更明確的開關
     fast_mode = st.checkbox("⚡ 啟動極速聽打模式（⚠️ 注意：無重點整理 + 無新聞標題，只直出純逐字稿，適合搶快！）")
     custom_keywords = st.text_input("💡 專有名詞小抄 (選填)：有特殊人名、地名或專案名嗎？請輸入並用逗號隔開 ，可大幅提升精準度！")
     
@@ -127,7 +127,6 @@ with tab2:
                     st.toast("檔案上傳中，請稍候...")
                     audio_file = genai.upload_file(path=temp_file_path)
                     
-                    # 讀取秒數改回最快的 2 秒
                     while audio_file.state.name == "PROCESSING":
                         time.sleep(2)
                         audio_file = genai.get_file(audio_file.name)
@@ -139,8 +138,8 @@ with tab2:
                     st.toast("檔案解析完成！AI 開始聽打中...")
                     model = genai.GenerativeModel(selected_model_name)
                     
+                    # 判斷基礎 Prompt
                     if fast_mode:
-                        # ---------------- 極速版 Prompt ----------------
                         if "1." in task_option:
                             prompt_text = """
                             請詳細聆聽這段音檔，並嚴格執行以下任務。
@@ -160,7 +159,6 @@ with tab2:
                                - 排版分段：只要換人說話就必須換行。在每一個原文段落的正下方，請直接提供對應的「中文翻譯」。不同語者的發言區塊之間，請務必「空一行」隔開，保持版面清爽適讀。
                             """
                     else:
-                        # ---------------- 完整版 Prompt (含重點與標題) ----------------
                         if "1." in task_option:
                             prompt_text = """
                             請詳細聆聽這段音檔，並嚴格執行以下三項任務。
@@ -188,14 +186,20 @@ with tab2:
                                - 格式要求：每個標題字數嚴格限制在「15 到 17 個字」以內。標題斷句請使用「全形空白」取代逗號（，），句末絕對不加句號。
                             """
                     
+                    # 【優化】動態加入語境校正與小抄指令
+                    prompt_text += """
+                    【語境校正強制指令】：你具備台灣時事、政治與財經常識。請務必根據上下文的邏輯，自動校正同音錯字（例如：聽到「果倉」且上下文提及民眾黨，必須強制校正為「黃國昌」）。絕對不允許出現不合邏輯的同音異字。
+                    """
+                    
+                    if custom_keywords:
+                        prompt_text += f"\n【今日重點專有名詞】：音檔中會頻繁出現以下詞彙，請優先辨識並確保字詞正確無誤：{custom_keywords}\n"
+                    
                     response = model.generate_content([audio_file, prompt_text])
                     
                     st.markdown("### 📝 聽打結果：")
                     st.code(response.text, language="markdown")
                     
-                    # 清理本地暫存檔
                     os.remove(temp_file_path)
-                    # 清理雲端暫存檔，確保下次不會讀取到錯誤的歷史音檔
                     genai.delete_file(audio_file.name)
                     
                 except Exception as e:
@@ -206,11 +210,9 @@ with tab3:
     st.header("🔗 多重網頁重點擷取與編譯")
     st.markdown("可同時貼上多個國內外新聞網址，AI 將自動判斷語言、翻譯外文，並為你整理大綱與人物說法。")
     
-    # 1. 介面升級：改成可以多行輸入的 text_area
     target_urls_input = st.text_area("請貼上文章網址 (URL)，若有多個網址請「換行」貼上：", height=150, placeholder="https://網址1.com\nhttps://網址2.com")
     
     if st.button("⚡ 擷取並分析重點"):
-        # 將輸入的文字按換行符號切開，過濾掉空白的行數
         urls = [url.strip() for url in target_urls_input.split('\n') if url.strip()]
         
         if not urls:
@@ -220,16 +222,13 @@ with tab3:
                 combined_article_text = ""
                 success_count = 0
                 
-                # 2. 爬蟲升級：使用迴圈依序去抓每個網址
                 for i, url in enumerate(urls):
                     try:
-                        # 關閉 Python 的安全警告，避免後台跑出一堆紅字
                         import urllib3
                         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
                         
                         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
                         
-                        # 加入 verify=False，強行突破 SSL 憑證限制
                         response = requests.get(url, headers=headers, timeout=10, verify=False)
                         response.raise_for_status() 
                         
@@ -238,7 +237,6 @@ with tab3:
                         article_text = "\n".join([p.text.strip() for p in paragraphs if len(p.text.strip()) > 10])
                         
                         if article_text:
-                            # 幫抓回來的內容貼上明確的標籤，讓 AI 不會搞混
                             combined_article_text += f"==== 【網站 {i+1}】來源網址：{url} ====\n{article_text}\n\n"
                             success_count += 1
                         else:
@@ -253,7 +251,6 @@ with tab3:
                 st.toast(f"✅ 成功抓取 {success_count} 個網頁！交給 AI 處理中...")
                 
                 try:
-                    # 3. 呼叫 Gemini 進行客製化分析
                     model = genai.GenerativeModel(selected_model_name)
                     
                     prompt_text = f"""
@@ -290,10 +287,3 @@ with tab3:
                         
                 except Exception as e:
                     st.error(f"生成失敗，錯誤原因：{e}")
-
-
-
-
-
-
-
