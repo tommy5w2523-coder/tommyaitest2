@@ -10,6 +10,23 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 st.set_page_config(page_title="新聞 AI 工作台", page_icon="📺")
+
+# --- 注入 CSS 隱形藥水：打造專業封閉系統質感 ---
+hide_streamlit_style = """
+            <style>
+            /* 隱藏右上角的 GitHub 圖示、Deploy 按鈕與預設 Toolbar */
+            [data-testid="stToolbar"] {visibility: hidden !important;}
+            /* 隱藏右上角的漢堡主選單 (三個點) */
+            #MainMenu {visibility: hidden !important;}
+            /* 隱藏最底部的 Made with Streamlit 浮水印 */
+            footer {visibility: hidden !important;}
+            /* 隱藏最上方的預設彩色裝飾線 */
+            header {visibility: hidden !important;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+# ---------------------------------------------
+
 st.title("新聞 AI 工作台")
 
 # ==================== 1. API 讀取與模型設定 ====================
