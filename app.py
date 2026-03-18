@@ -207,12 +207,12 @@ with tab4:
                 except Exception as e:
                     st.error(f"生成失敗：{e}")
 
-# ==================== 分頁 5：新聞稿轉換 (具備記憶體防消失版) ====================
+# ==================== 分頁 5：新聞稿轉換 (記憶體 + 一鍵複製 + 專業稱謂版) ====================
 with tab5:
     st.header("📰 新聞稿轉換")
     st.markdown("貼上官方聲明/公關稿，AI 將自動轉換成口語化、客觀且好讀的網路新聞報導。")
     
-    # 【關鍵 1】初始化這一個分頁的專屬「記憶體」
+    # 記憶體初始化 (確保不會失憶)
     if "tab5_generated_news" not in st.session_state:
         st.session_state.tab5_generated_news = ""
     
@@ -226,34 +226,49 @@ with tab5:
             with st.spinner('資深網編改寫中...'):
                 try:
                     model = genai.GenerativeModel(selected_model_name)
+                    
+                    # 💡 提示詞升級：加入第 3 點「人物稱謂鐵律」
                     prompt_text = f"""
                     你現在是一位台灣知名電視台所屬新聞網站的「資深網路新聞編輯」。
                     任務：將官方聲明改寫為客觀、流暢、口語化且易讀的【網路新聞報導】。
+                    
+                    請嚴格遵守以下改寫鐵律：
                     1. 【口語化與禁止超譯】：必須要用口語化、自然流暢的新聞敘事方式改寫。【絕對禁止超譯或腦補】，必須 100% 貼合原始聲明。
                     2. 【視角強制轉換】：第一人稱（如：本公司、本人），強制轉換為第三人稱（如：該公司、某某某表示）。
-                    3. 【去除公關水份】：刪除過度吹捧詞彙，保留核心事實。
-                    4. 【吸睛大標題】：撰寫 1 個大標題（25字內，全形空白斷句，無句號）。【注意：請直接產出內文，絕對不要生成任何段落小標題】。
-                    5. 【新聞導言】：第一段必須包含 5W1H，100 字以內交代輪廓。
-                    6. 【保留核心金句】：從聲明稿中萃取一兩句金句，以引號（「」）原音重現。
+                    3. 【人物稱謂鐵律（平面新聞規範）】：同一人物在新聞稿中第一次出現時，請寫出「完整職稱＋姓名」（例如：行政院副院長鄭麗君）。後續段落若再次提及同一人，【請一律只寫姓名】（例如：鄭麗君），絕對禁止重複加上職稱或類似「鄭副院長」的稱呼。
+                    4. 【去除公關水份】：刪除過度吹捧詞彙，保留核心事實。
+                    5. 【吸睛大標題】：撰寫 1 個大標題（25字內，全形空白斷句，無句號）。【注意：請直接產出內文，絕對不要生成任何段落小標題】。
+                    6. 【新聞導言】：第一段必須包含 5W1H，100 字以內交代輪廓。
+                    7. 【保留核心金句】：從聲明稿中萃取一兩句金句，以引號（「」）原音重現。
+                    
                     記者補充背景：{pr_context}
                     原始聲明：\n{pr_text}
                     """
+                    
                     safe_config = genai.GenerationConfig(temperature=0.2)
                     response = model.generate_content(prompt_text, generation_config=safe_config)
                     
-                    # 【關鍵 2】將產生的內容存進「記憶體」中
+                    # 將產生的內容存進記憶體
                     st.session_state.tab5_generated_news = response.text
                         
                 except Exception as e:
                     st.error(f"生成失敗，錯誤原因：{e}")
 
-    # 【關鍵 3】只要記憶體裡面有東西，就顯示出來（這樣不管怎麼點擊都不會消失了！）
+    # 顯示區塊 (編輯框 + 同步一鍵複製框)
     if st.session_state.tab5_generated_news:
         st.success("網編改寫完成！")
         
-        # 使用單一視窗，每次你在裡面改字，它都會自動同步回記憶體
-        st.session_state.tab5_generated_news = st.text_area(
-            "📝 請直接在下方修改文字。修改完畢後，請點擊框內按下【Ctrl+A 全選】➔【Ctrl+C 複製】即可帶走！", 
+        # 上方：讓記者可以手動微調的編輯框
+        edited_text = st.text_area(
+            "📝 第一步：在此框內閱讀、上下捲動，並可直接打字修改", 
             value=st.session_state.tab5_generated_news, 
             height=400
         )
+        
+        # 同步更新記憶體 (只要有打字修改，就存起來給下方的複製框用)
+        if edited_text != st.session_state.tab5_generated_news:
+            st.session_state.tab5_generated_news = edited_text
+        
+        # 下方：負責提供「一鍵複製」按鈕的唯讀區塊
+        st.markdown("📋 第二步：確認修改完畢後，點擊下方區塊**「右上角的複製圖示」**即可一鍵帶走👇")
+        st.code(st.session_state.tab5_generated_news, language="markdown")
