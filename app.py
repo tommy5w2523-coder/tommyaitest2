@@ -405,10 +405,19 @@ with tab5:
                     safe_config = genai.GenerationConfig(temperature=0.2)
                     response = model.generate_content(prompt_text, generation_config=safe_config)
                     
-                    st.success("網編改寫完成！")
+                   st.success("網編改寫完成！")
                     st.markdown("### 📰 網路新聞成品：")
-                    # 改用 text_area，不僅會自動換行、可上下捲動，還能直接在裡面編輯微調！
-                    st.text_area("✅ 可直接上下捲動閱讀、全選複製，或在框內修改文字：", value=response.text, height=400)
+                    
+                    # 1. 閱讀與編輯區（上框）
+                    edited_news = st.text_area(
+                        "📝 第一步：在此框內閱讀、上下捲動，並可直接打字修改", 
+                        value=response.text, 
+                        height=400
+                    )
+                    
+                    # 2. 一鍵複製區（下框，會自動同步上方的修改）
+                    st.markdown("📋 第二步：確認修改完畢後，點擊下方區塊**「右上角的複製圖示」**即可一鍵帶走👇")
+                    st.code(edited_news, language="markdown")
                         
                 except Exception as e:
                     st.error(f"生成失敗，錯誤原因：{e}")
