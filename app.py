@@ -9,6 +9,7 @@ import urllib3
 # 關閉 urllib3 的安全警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+# ==================== 網頁基礎設定與介面美化 ====================
 st.set_page_config(page_title="新聞 AI 工作台", page_icon="📺")
 
 # --- 注入 CSS 隱形藥水：打造專業封閉系統質感 ---
@@ -53,7 +54,7 @@ else:
     selected_model_name = None
 
 # ==================== 分頁設定 ====================
-tab1, tab2, tab3, tab4 = st.tabs(["📝 新聞稿改寫", "🎧 多媒體逐字稿", "🔗 網頁重點擷取", "💡 稿頭與標題生成"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 新聞稿改寫", "🎧 多媒體逐字稿", "🔗 網頁重點擷取", "💡 稿頭與標題生成", "📰 新聞稿轉換"])
 
 # ==================== 分頁 1：改寫文章與網頁格式 ====================
 with tab1:
@@ -65,7 +66,7 @@ with tab1:
 
     # Core Rules (嚴格執行)
     1. 保留稿頭：文稿的第一段（通常為主播稿頭）必須「一字不漏」完全保留，包含其原有的標點符號。
-    2. 精煉標題：忽略文稿中的「## １２３４...」等佔位符號。請綜合內文，產出一個字數介於 25 到 30 字 的大標題。
+    2. 精煉標題：忽略文稿中的佔位符號。請綜合內文，產出一個字數介於 25 到 30 字 的大標題。
        【標題特別規範】：
        - 標題最前方必須強制加上「影音／」的前綴字眼。
        - 標題的斷句處請使用「全形空白」取代逗號（，）。
@@ -128,7 +129,12 @@ with tab2:
     ])
     
     fast_mode = st.checkbox("⚡ 啟動極速聽打模式（⚠️ 注意：無重點整理 + 無新聞標題，只直出純逐字稿，適合搶快！）")
-    custom_keywords = st.text_input("💡 專有名詞小抄 (選填)：輸入人名、地名或專案名並用逗號隔開 (如：賴清德, 輝達)，可大幅提升精準度！")
+    
+    custom_instructions = st.text_area(
+        "💡 採訪背景與特殊指令 (選填)：", 
+        height=100, 
+        placeholder="請直接用白話文告訴 AI 狀況。例如：\n1. 這是一篇關於美股與核能產業的專訪。\n2. 音檔中的女聲是記者，男聲是分析師黃國昌。\n3. 遇到雜音請略過，絕對不要跳針猜測。"
+    )
     
     if st.button("🎧 開始聽打分析"):
         if uploaded_file:
@@ -156,7 +162,7 @@ with tab2:
                         if "1." in task_option:
                             prompt_text = """
                             請詳細聆聽這段音檔，並嚴格執行以下任務。
-                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請略過。
+                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請直接略過，絕對禁止猜測或重複上一句話。
 
                             1. 【中文逐字稿】：產出高準確度且語句通順的中文逐字稿。
                                - 語者辨識：請務必分辨不同的說話者。
@@ -165,7 +171,7 @@ with tab2:
                         else:
                             prompt_text = """
                             請詳細聆聽這段音檔，並嚴格執行以下任務。
-                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請略過。
+                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請直接略過。
 
                             1. 【雙語比對逐字稿】：自動辨識音檔中的原始語言，產出精確的「原文逐字稿」。
                                - 排版分段：換人說話必須換行。在每一個原文段落的正下方，直接提供對應的「中文翻譯」。區塊之間請空一行。
@@ -174,7 +180,7 @@ with tab2:
                         if "1." in task_option:
                             prompt_text = """
                             請詳細聆聽這段音檔，並嚴格執行以下三項任務。
-                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請略過。
+                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請直接略過。
 
                             1. 【中文逐字稿】：產出高準確度且語句通順的中文逐字稿。
                                - 語者辨識：請務必分辨不同的說話者。
@@ -185,7 +191,7 @@ with tab2:
                         else:
                             prompt_text = """
                             請詳細聆聽這段音檔，並嚴格執行以下三項任務。
-                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請略過。
+                            【聽打特別規範】：請自動過濾無意義的語助詞。若遇到收音不清請直接略過。
 
                             1. 【雙語比對逐字稿】：產出精確的「原文逐字稿」。
                                - 排版分段：換人說話必須換行。在原文段落正下方，直接提供對應的「中文翻譯」。
@@ -194,16 +200,21 @@ with tab2:
                             """
                     
                     prompt_text += """
-                    【語境校正強制指令】：你具備台灣時事、政治、財經與國際常識。請務必根據上下文邏輯，自動校正同音錯字（例如聽到果倉，請自動校正為黃國昌）。絕對不允許出現不合邏輯的同音異字。
+                    【語境校正強制指令】：你具備台灣時事、政治、財經與國際常識。請務必根據上下文的邏輯，自動校正同音錯字。絕對不允許出現不合邏輯的同音異字。
                     """
                     
-                    if custom_keywords:
-                        prompt_text += f"\n【今日重點專有名詞】：請優先辨識並確保以下字詞正確無誤：{custom_keywords}\n"
+                    if custom_instructions:
+                        prompt_text += f"""
+                        \n=========================================
+                        【記者補充背景與最高指令】：
+                        {custom_instructions}
+                        =========================================
+                        請將上述記者的補充資訊作為「最高指導原則」，若有指定說話者的身分，請在逐字稿中直接使用該名稱標註。
+                        """
                     
-                    # 使用 Flash 相容的低溫防護設定
                     safe_config = genai.GenerationConfig(temperature=0.2)
                     
-                    # 🛡️ 解除 Google 預設的道德與安全限制 (記者專用設定，防止新聞敏感詞被擋)
+                    # 🛡️ 解除 Google 預設的道德與安全限制，防止新聞敏感詞被擋
                     custom_safety_settings = [
                         {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
                         {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
@@ -211,14 +222,12 @@ with tab2:
                         {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
                     ]
                     
-                    # 將安全設定一起送給模型
                     response = model.generate_content(
                         [audio_file, prompt_text], 
                         generation_config=safe_config,
                         safety_settings=custom_safety_settings
                     )
                     
-                    # 防白卷安全網
                     if not response.candidates or not response.candidates[0].content.parts:
                         st.error("⚠️ AI 這次交了白卷！可能是該段音檔雜音過多、全為空白，或是 AI 觸發了防護機制。請確認音檔內容或稍微剪輯後再試一次。")
                     else:
@@ -323,10 +332,8 @@ with tab4:
         else:
             with st.spinner('編輯台長官審稿中...正在生標題與稿頭...'):
                 try:
-                    # ⚠️ 實戰提醒：如果還是很慢，請檢查左側選單是不是不小心選到了 Pro 模型！請務必使用 Flash 模型。
                     model = genai.GenerativeModel(selected_model_name)
                     
-                    # 提示詞優化：將「負面禁止」改為「正面要求」，大幅提升 AI 運算速度
                     prompt_text = f"""
                     你是一位台灣電視新聞台的核稿編輯。請依據以下新聞內文，執行兩項任務：
 
@@ -348,12 +355,57 @@ with tab4:
                     {raw_news_text}
                     """
                     
-                    # 微微調升至 0.1，給予 AI 基本的運算潤滑，兼顧不超譯與極速出稿
                     safe_config = genai.GenerationConfig(temperature=0.1)
                     response = model.generate_content(prompt_text, generation_config=safe_config)
                     
                     st.success("產出完成！")
                     st.markdown("### 📝 稿頭與標題結果：")
+                    st.code(response.text, language="markdown")
+                        
+                except Exception as e:
+                    st.error(f"生成失敗，錯誤原因：{e}")
+
+# ==================== 分頁 5：新聞稿轉換 ====================
+with tab5:
+    st.header("📰 新聞稿轉換")
+    st.markdown("貼上政府機關、政治人物或企業的官方聲明/公關稿，AI 將自動去除「公關贅字」，轉換成客觀、易讀的網路新聞報導格式。")
+    
+    pr_text = st.text_area("請貼上官方聲明或公關稿內文：", height=200, placeholder="將長篇大論的聲明稿、臉書貼文貼在這裡...")
+    pr_context = st.text_input("💡 補充背景 (選填)：", placeholder="例如：這是針對早上黃國昌記者會的回應，幫助 AI 掌握前因後果...")
+    
+    if st.button("🚀 產出網路新聞"):
+        if not pr_text:
+            st.warning("請先貼上聲明或公關稿喔！")
+        else:
+            with st.spinner('資深網編改寫中...'):
+                try:
+                    model = genai.GenerativeModel(selected_model_name)
+                    
+                    prompt_text = f"""
+                    你現在是一位台灣知名電視台所屬新聞網站的「資深網路新聞編輯」。
+                    你的任務是將一篇【官方聲明】、【公關稿】或【政治人物社群貼文】，改寫為客觀、流暢、符合 SEO 邏輯的【網路新聞報導】。
+
+                    請嚴格遵守以下改寫鐵律：
+                    1. 【視角強制轉換】：將官方聲明的第一人稱（如：本公司、本黨、我方、本人），強制轉換為第三人稱的新聞客觀視角（如：該公司、該黨、某某某表示）。
+                    2. 【去除公關水份】：刪除過度吹捧、情緒化或無實質意義的公關詞彙，保留核心事實與重點。若有專有名詞請維持精確。
+                    3. 【吸睛大標題】：撰寫 1 個符合網路新聞胃口的大標題（字數 25 字以內，具備資訊量與吸引力，使用「全形空白」斷句，不加句號）。
+                    4. 【新聞導言（Lead）】：第一段必須是包含 5W1H 的標準新聞導言，用 100 字以內交代整起事件的輪廓與最新進度。
+                    5. 【邏輯分段與小標】：內文請根據邏輯分段，並在段落前加上 3 到 4 個具備重點提示功能的「小標題」（請用 ### 小標題文字 的 Markdown 格式）。
+                    6. 【保留核心金句】：從聲明稿中萃取最具代表性的一到兩句話，以引號（「」）作為原音重現，增加報導可信度。
+
+                    記者補充背景資訊（若無則忽略，若有請融入導言中交代脈絡）：
+                    {pr_context}
+
+                    以下是原始聲明/公關稿：
+                    ---
+                    {pr_text}
+                    """
+                    
+                    safe_config = genai.GenerationConfig(temperature=0.2)
+                    response = model.generate_content(prompt_text, generation_config=safe_config)
+                    
+                    st.success("網編改寫完成！")
+                    st.markdown("### 📰 網路新聞成品：")
                     st.code(response.text, language="markdown")
                         
                 except Exception as e:
