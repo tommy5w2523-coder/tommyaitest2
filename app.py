@@ -48,7 +48,7 @@ else:
     selected_model_name = None
 
 # ==================== 分頁設定 ====================
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 新聞稿改寫", "🎧 多媒體逐字稿", "🔗 網頁重點擷取", "💡 稿頭與標題生成", "📰 新聞稿轉換"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs([" SOT改寫", " 語音轉逐字", " 網頁重點擷取", " 快速生成稿標", " 新聞稿改寫"])
 
 # ==================== 分頁 1：改寫文章與網頁格式 ====================
 with tab1:
@@ -68,7 +68,7 @@ with tab1:
     7. 預擬 6 個專屬圖說：產出 6 句圖說。必須套用 <br /> 圖說。（圖／TVBS） <br /> 語法。
     8. 強制純文字與程式碼區塊輸出：所有內容必須包裝在 text 程式碼區塊中輸出。
     """    
-    user_text = st.text_area("請貼上原始採訪稿或雜亂的筆記：", height=200)
+    user_text = st.text_area("請貼上SOT文稿：", height=200)
     
     if st.button("🚀 開始改寫與排版"):
         if user_text:
@@ -89,7 +89,7 @@ with tab2:
     st.info("💡 **手機版上傳戰術提示**：iPhone 語音備忘錄請先「儲存到檔案」再上傳！")
     
     task_option = st.radio("你想做什麼？", ["1. 產生中文逐字稿，並條列重點與 3 個重點標題", "2. 產生原文逐字稿與中文翻譯比對，並生成 3 個重點標題"])
-    fast_mode = st.checkbox("⚡ 啟動極速聽打模式（無重點整理與標題，適合搶快）")
+    fast_mode = st.checkbox("⚡ 快速聽打（無重點整理與標題）")
     custom_instructions = st.text_area("💡 採訪背景與特殊指令 (選填)：", height=100)
     
     if st.button("🎧 開始聽打分析"):
@@ -146,7 +146,7 @@ with tab2:
 
 # ==================== 分頁 3：網頁重點擷取 ====================
 with tab3:
-    st.header("🔗 多重網頁重點擷取與編譯")
+    st.header("多網頁重點擷取與編譯")
     
     target_urls_input = st.text_area("請貼上文章網址 (URL)，若有多個網址請「換行」貼上：", height=150)
     
@@ -183,7 +183,7 @@ with tab3:
 
 # ==================== 分頁 4：主播稿頭與電視標題生成 ====================
 with tab4:
-    st.header("💡 主播稿頭與電視標題生成")
+    st.header(" 快速生成稿頭與標題")
     
     raw_news_text = st.text_area("請貼上你寫好的新聞內文：", height=200)
     
@@ -209,7 +209,7 @@ with tab4:
 
 # ==================== 分頁 5：新聞稿轉換 (記憶體 + 一鍵複製 + 專業稱謂版) ====================
 with tab5:
-    st.header("📰 新聞稿轉換")
+    st.header("新聞稿改寫")
     st.markdown("貼上官方聲明/公關稿，AI 將自動轉換成口語化、客觀且好讀的網路新聞報導。")
     
     # 記憶體初始化 (確保不會失憶)
@@ -223,7 +223,7 @@ with tab5:
         if not pr_text:
             st.warning("請先貼上聲明或公關稿喔！")
         else:
-            with st.spinner('資深網編改寫中...'):
+            with st.spinner('改寫中...'):
                 try:
                     model = genai.GenerativeModel(selected_model_name)
                     
