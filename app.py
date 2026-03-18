@@ -401,11 +401,10 @@ with tab5:
                     {pr_text}
                     """
                     
-                    # 維持 0.2 微溫，讓它有能力潤飾語氣，但又不敢隨便亂編事實
                     safe_config = genai.GenerationConfig(temperature=0.2)
                     response = model.generate_content(prompt_text, generation_config=safe_config)
                     
-                   st.success("網編改寫完成！")
+                    st.success("網編改寫完成！")
                     st.markdown("### 📰 網路新聞成品：")
                     
                     # 1. 閱讀與編輯區（上框）
