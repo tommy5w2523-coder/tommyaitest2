@@ -185,7 +185,21 @@ with tab2:
                     
                     # 使用 Flash 相容的低溫防護設定
                     safe_config = genai.GenerationConfig(temperature=0.2)
-                    response = model.generate_content([audio_file, prompt_text], generation_config=safe_config)
+                    
+                    # 🛡️ 解除 Google 預設的道德與安全限制 (記者專用設定，防止新聞敏感詞被擋)
+                    custom_safety_settings = [
+                        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+                    ]
+                    
+                    # 將安全設定一起送給模型
+                    response = model.generate_content(
+                        [audio_file, prompt_text], 
+                        generation_config=safe_config,
+                        safety_settings=custom_safety_settings
+                    )
                     
                     # 防白卷安全網
                     if not response.candidates or not response.candidates[0].content.parts:
