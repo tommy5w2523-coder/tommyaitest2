@@ -407,7 +407,8 @@ with tab5:
                     
                     st.success("網編改寫完成！")
                     st.markdown("### 📰 網路新聞成品：")
-                    st.code(response.text, language="markdown")
+                    # 改用 text_area，不僅會自動換行、可上下捲動，還能直接在裡面編輯微調！
+                    st.text_area("✅ 可直接上下捲動閱讀、全選複製，或在框內修改文字：", value=response.text, height=400)
                         
                 except Exception as e:
                     st.error(f"生成失敗，錯誤原因：{e}")
